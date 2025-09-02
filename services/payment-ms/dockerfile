@@ -1,0 +1,37 @@
+# -----------------------------
+# Build Stage
+# -----------------------------
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Copy only payment-ms go.mod & go.sum for better layer caching
+COPY services/payment-ms/go.mod services/payment-ms/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy all source code
+COPY . .
+
+# Build payment-ms binary
+RUN go build -o payment-ms ./services/payment-ms/cmd
+
+# -----------------------------
+# Final Stage
+# -----------------------------
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy compiled binary from builder
+COPY --from=builder /app/payment-ms .
+
+# Expose HTTP and gRPC ports
+EXPOSE 8085 50055
+
+# Copy .env (adjust path if your env file is inside the service folder)
+COPY services/payment-ms/.env .env
+
+# Run the binary
+CMD ["./payment-ms"]

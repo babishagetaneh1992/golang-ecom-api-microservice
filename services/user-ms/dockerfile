@@ -1,0 +1,34 @@
+# ---------- Build Stage ----------
+FROM golang:1.22-alpine AS builder
+
+# Install build tools
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Copy only go.mod/go.sum (better caching)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy rest of the source
+COPY . .
+
+# Build user-ms binary (adjust path if needed)
+RUN go build -o user-ms ./cmd/main.go
+
+# ---------- Runtime Stage ----------
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy the binary from builder
+COPY --from=builder /app/user-ms .
+
+# Copy env file if needed (optional)
+COPY .env .env
+
+# Expose ports (HTTP :8080, gRPC :50051)
+EXPOSE 8080 50051
+
+# Run binary
+CMD ["./user-ms"]

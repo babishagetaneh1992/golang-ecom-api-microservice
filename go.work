@@ -1,0 +1,10 @@
+go 1.24.4
+
+use (
+	./pkg
+	./services/cart-ms
+	./services/order-ms
+	./services/payment-ms
+	./services/product-ms
+	./services/user-ms
+)

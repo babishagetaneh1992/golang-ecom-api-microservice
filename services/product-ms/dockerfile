@@ -1,0 +1,37 @@
+# -----------------------------
+# Build Stage
+# -----------------------------
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+# Copy only go.mod and go.sum first (better for caching)
+COPY services/product-ms/go.mod services/product-ms/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the entire source (workspace not strictly needed inside container)
+COPY . .
+
+# Build product-ms binary
+RUN go build -o product-ms ./services/product-ms/cmd
+
+# -----------------------------
+# Final Stage
+# -----------------------------
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy compiled binary from builder
+COPY --from=builder /app/product-ms .
+
+# Expose HTTP and gRPC ports
+EXPOSE 8081 50052
+
+# Copy env file if needed inside container
+COPY services/product-ms/.env .env
+
+# Run the binary
+CMD ["./product-ms"]
