@@ -1,34 +1,26 @@
 # ---------- Build Stage ----------
-FROM golang:1.22-alpine AS builder
-
-# Install build tools
-RUN apk add --no-cache git
+FROM golang:1.24.4-alpine AS builder
 
 WORKDIR /app
 
-# Copy only go.mod/go.sum (better caching)
-COPY go.mod go.sum ./
+# Copy go.mod + go.sum first
+COPY services/user-ms/go.mod services/user-ms/go.sum ./
+ENV GOPROXY=https://proxy.golang.org,direct
 RUN go mod download
 
-# Copy rest of the source
-COPY . .
+# Copy source code
+COPY services/user-ms ./services/user-ms
+COPY pkg ./pkg
 
-# Build user-ms binary (adjust path if needed)
-RUN go build -o user-ms ./cmd/main.go
+# Move into service folder (where go.mod is)
+WORKDIR /app/services/user-ms
 
-# ---------- Runtime Stage ----------
+# Build the binary
+RUN go build -o /app/user-ms ./cmd
+
+# ---------- Final Stage ----------
 FROM alpine:latest
-
 WORKDIR /app
-
-# Copy the binary from builder
 COPY --from=builder /app/user-ms .
-
-# Copy env file if needed (optional)
-COPY .env .env
-
-# Expose ports (HTTP :8080, gRPC :50051)
 EXPOSE 8080 50051
-
-# Run binary
 CMD ["./user-ms"]

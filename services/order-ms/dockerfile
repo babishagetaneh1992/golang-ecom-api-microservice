@@ -1,37 +1,18 @@
-# -----------------------------
-# Build Stage
-# -----------------------------
-FROM golang:1.22-alpine AS builder
-
+FROM golang:1.24.4-alpine AS builder
 WORKDIR /app
 
-# Copy only order-ms go.mod & go.sum for better layer caching
 COPY services/order-ms/go.mod services/order-ms/go.sum ./
-
-# Download dependencies
+ENV GOPROXY=https://proxy.golang.org,direct
 RUN go mod download
 
-# Copy full source
-COPY . .
+COPY services/order-ms ./services/order-ms
+COPY pkg ./pkg
 
-# Build order-ms binary
-RUN go build -o order-ms ./services/order-ms/cmd
+WORKDIR /app/services/order-ms
+RUN go build -o /app/order-ms ./cmd
 
-# -----------------------------
-# Final Stage
-# -----------------------------
 FROM alpine:latest
-
 WORKDIR /app
-
-# Copy compiled binary from builder
 COPY --from=builder /app/order-ms .
-
-# Expose HTTP and gRPC ports
 EXPOSE 8084 50054
-
-# Copy env file (change path if your .env is at repo root)
-COPY services/order-ms/.env .env
-
-# Run the binary
 CMD ["./order-ms"]

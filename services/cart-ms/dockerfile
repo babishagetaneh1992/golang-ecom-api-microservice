@@ -1,37 +1,18 @@
-# -----------------------------
-# Build Stage
-# -----------------------------
-FROM golang:1.22-alpine AS builder
-
+FROM golang:1.24.4-alpine AS builder
 WORKDIR /app
 
-# Copy only cart-ms go.mod & go.sum for better layer caching
 COPY services/cart-ms/go.mod services/cart-ms/go.sum ./
-
-# Download dependencies
+ENV GOPROXY=https://proxy.golang.org,direct
 RUN go mod download
 
-# Copy all source code
-COPY . .
+COPY services/cart-ms ./services/cart-ms
+COPY pkg ./pkg
 
-# Build cart-ms binary
-RUN go build -o cart-ms ./services/cart-ms/cmd
+WORKDIR /app/services/cart-ms
+RUN go build -o /app/cart-ms ./cmd
 
-# -----------------------------
-# Final Stage
-# -----------------------------
 FROM alpine:latest
-
 WORKDIR /app
-
-# Copy compiled binary from builder
 COPY --from=builder /app/cart-ms .
-
-# Expose HTTP and gRPC ports
 EXPOSE 8083 50053
-
-# Copy .env (adjust path if your env file is inside the service folder)
-COPY services/cart-ms/.env .env
-
-# Run the binary
 CMD ["./cart-ms"]

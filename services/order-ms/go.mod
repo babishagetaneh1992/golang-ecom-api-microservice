@@ -12,6 +12,8 @@ require (
 	google.golang.org/protobuf v1.36.8
 )
 
+
+
 require (
 	github.com/IBM/sarama v1.46.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
